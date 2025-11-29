@@ -4,3 +4,5 @@ numpy
 matplotlib
 gdown
 openai
+cloudpickle
+scikit-learn
