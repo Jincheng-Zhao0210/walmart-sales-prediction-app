@@ -1,38 +1,43 @@
+# ===============================================
+# WALMART SALES PREDICTION APP — FINAL VERSION
+# Fully working on Streamlit Cloud
+# Loads model.pkl from Google Drive automatically
+# ===============================================
+
 import streamlit as st
 import pandas as pd
 import numpy as np
-import cloudpickle as pickle          # IMPORTANT: USE CLOUDPICKLE
+import cloudpickle as pickle
 import base64
 import matplotlib.pyplot as plt
-from openai import OpenAI
-import gdown
 import os
+import requests
+from openai import OpenAI
 
-# ============================================
-# 1) DOWNLOAD MODEL FROM GOOGLE DRIVE
-# ============================================
+# ===============================================
+# GOOGLE DRIVE DOWNLOAD
+# ===============================================
 MODEL_URL = "https://drive.google.com/uc?id=15nG5Po9RjDAFa0g8wfZFlWIwuuvhdzjQ"
 MODEL_PATH = "model.pkl"
 
-# Download model if not exist
+# Download model if missing
 if not os.path.exists(MODEL_PATH):
-    gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
+    with open(MODEL_PATH, "wb") as f:
+        f.write(requests.get(MODEL_URL).content)
 
-
-# ============================================
-# 2) LOAD MODEL
-# ============================================
+# ===============================================
+# LOAD MODEL (cloudpickle)
+# ===============================================
 @st.cache_resource
 def load_model():
     with open(MODEL_PATH, "rb") as f:
-        return pickle.load(f)    # now using cloudpickle.load()
-    
+        return pickle.load(f)
+
 model = load_model()
 
-
-# ============================================
-# 3) LOAD BACKGROUND + LOGO
-# ============================================
+# ===============================================
+# LOAD IMAGES
+# ===============================================
 def get_base64(path):
     try:
         with open(path, "rb") as f:
@@ -43,16 +48,15 @@ def get_base64(path):
 bg64 = get_base64("background.jpg")
 logo64 = get_base64("logo.png")
 
-
-# ============================================
-# 4) OPENAI (SECRET KEY)
-# ============================================
+# ===============================================
+# OPENAI CLIENT (use Streamlit secrets)
+# ===============================================
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def ai_insight(title, explanation, values):
     prompt = f"""
     Explain this chart in simple business English.
-    No ML terms.
+    Avoid ML terminology.
 
     Title: {title}
     Explanation: {explanation}
@@ -60,20 +64,18 @@ def ai_insight(title, explanation, values):
     """
 
     try:
-        response = client.chat.completions.create(
+        result = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=200
         )
-        return response.choices[0].message.content.strip()
-
+        return result.choices[0].message.content.strip()
     except:
         return "(AI insight unavailable)"
 
-
-# ============================================
-# 5) PAGE STYLING
-# ============================================
+# ===============================================
+# PAGE STYLING
+# ===============================================
 if bg64:
     st.markdown(f"""
     <style>
@@ -88,6 +90,7 @@ if bg64:
         border-radius: 15px;
         color: white;
         backdrop-filter: blur(8px);
+        box-shadow: 0 4px 18px rgba(0,0,0,0.5);
     }}
     .pred-box {{
         background: #0EA5E9;
@@ -101,29 +104,27 @@ if bg64:
     </style>
     """, unsafe_allow_html=True)
 
-
-# ============================================
-# 6) HEADER
-# ============================================
+# ===============================================
+# HEADER
+# ===============================================
 st.markdown("<h1 style='text-align:center;color:#38BDF8;'>Walmart Weekly Sales Prediction</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;color:#7dd3fc;'>Dark Theme • Sky Blue • ML + AI Insights</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;color:#7dd3fc;'>Dark Theme • Sky Blue Accents • AI Insights</p>", unsafe_allow_html=True)
 
-
-# ============================================
-# 7) INPUT FORM
-# ============================================
 st.markdown('<div class="main-card">', unsafe_allow_html=True)
 
+# ===============================================
+# INPUTS
+# ===============================================
 st.header("🔧 Enter Store Information")
 
 store = st.number_input("Store ID", 1, 50, 1)
 dept = st.number_input("Dept ID", 1, 99, 1)
-holiday = st.selectbox("Holiday Flag", [0, 1])
+holiday = st.selectbox("Holiday Flag (0 = No, 1 = Yes)", [0, 1])
 temp = st.number_input("Temperature (°F)", value=70.0)
 fuel = st.number_input("Fuel Price ($)", value=2.50)
 cpi = st.number_input("CPI", value=220.0)
 unemp = st.number_input("Unemployment (%)", value=5.0)
-year = st.number_input("Year", value=2023)
+year = st.number_input("Year", value=2024)
 month = st.number_input("Month", 1, 12, 1)
 week = st.number_input("Week", 1, 53, 1)
 
@@ -140,18 +141,16 @@ df = pd.DataFrame({
     "Week": [week]
 })
 
-
-# ============================================
-# 8) PREDICTION
-# ============================================
+# ===============================================
+# PREDICTION
+# ===============================================
 if st.button("Predict Weekly Sales"):
     pred = float(model.predict(df)[0])
     st.markdown(f'<div class="pred-box"><b>${pred:,.2f}</b></div>', unsafe_allow_html=True)
 
-
-# ============================================
-# 9) FEATURE IMPORTANCE
-# ============================================
+# ===============================================
+# FEATURE IMPORTANCE (Simple local simulation)
+# ===============================================
 st.subheader("📌 Feature Importance")
 
 base = float(model.predict(df)[0])
@@ -159,7 +158,7 @@ importance = {}
 
 for col in df.columns:
     t = df.copy()
-    t[col] *= 1.10
+    t[col] *= 1.10  # +10% change
     importance[col] = abs(float(model.predict(t)[0]) - base)
 
 importance = dict(sorted(importance.items(), key=lambda x: x[1], reverse=True))
@@ -171,25 +170,26 @@ st.pyplot(fig)
 
 st.write(ai_insight("Feature Importance", "Drivers of weekly sales.", importance))
 
-
-# ============================================
-# 10) 10-WEEK FORECAST
-# ============================================
+# ===============================================
+# 10-WEEK FORECAST
+# ===============================================
 st.subheader("📈 10-Week Forecast")
 
-future_weeks = np.arange(week, week + 10)
+future = np.arange(week, week + 10)
 df_future = df.loc[df.index.repeat(10)].copy()
-df_future["Week"] = future_weeks
+df_future["Week"] = future
 
 preds = model.predict(df_future)
 
 fig2, ax2 = plt.subplots()
-ax2.plot(future_weeks, preds, marker="o", color="#7dd3fc")
+ax2.plot(future, preds, marker="o", color="#7dd3fc")
+ax2.set_title("10-Week Predicted Sales Trend")
 st.pyplot(fig2)
 
-st.write(ai_insight("10-Week Forecast", "Predicted sales trend.", {
-    "weeks": list(future_weeks),
-    "sales": list(preds)
-}))
+st.write(ai_insight(
+    "10-Week Forecast",
+    "Predicted sales trend for next 10 weeks.",
+    {"weeks": list(future), "sales": list(preds)}
+))
 
 st.markdown("</div>", unsafe_allow_html=True)
