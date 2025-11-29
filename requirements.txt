@@ -2,7 +2,8 @@ streamlit
 pandas
 numpy
 matplotlib
-gdown
+requests
 openai
 cloudpickle
 scikit-learn
+
