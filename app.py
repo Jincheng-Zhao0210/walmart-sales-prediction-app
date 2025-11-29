@@ -10,7 +10,7 @@ Original file is located at
 import streamlit as st
 import pandas as pd
 import numpy as np
-import pickle
+import cloudpickle as pickle
 import base64
 import matplotlib.pyplot as plt
 import gdown
