@@ -1,6 +1,6 @@
 # ============================================================
 # Walmart Sales Prediction – FINAL Streamlit App
-# Uses Google Drive model.pkl + pickle loader
+# FIXED: Uses cloudpickle to load sklearn model
 # ============================================================
 
 import streamlit as st
@@ -9,8 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import base64
 import os
-import pickle
 import gdown
+import cloudpickle
 from openai import OpenAI
 
 # ============================================================
@@ -27,13 +27,13 @@ if not os.path.exists(MODEL_PATH):
 
 
 # ============================================================
-# 2) LOAD MODEL (pickle — this FIXES your Streamlit error)
+# 2) LOAD MODEL (USE CLOUDPICKLE — not pickle)
 # ============================================================
 
 @st.cache_resource
 def load_model():
     with open(MODEL_PATH, "rb") as f:
-        return pickle.load(f)
+        return cloudpickle.load(f)   # 🔥 FIX HERE
 
 model = load_model()
 
@@ -61,8 +61,8 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def ai_insight(title, explanation, values):
     prompt = f"""
-    Explain this chart in simple business English.
-    Avoid machine learning terminology.
+    Explain this result in simple business English.
+    Avoid ML terminology.
 
     Title: {title}
     Explanation: {explanation}
