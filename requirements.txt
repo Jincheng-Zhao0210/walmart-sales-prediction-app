@@ -3,6 +3,5 @@ pandas
 numpy
 matplotlib
 gdown
-cloudpickle
-scikit-learn
 openai
+scikit-learn
