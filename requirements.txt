@@ -2,6 +2,6 @@ streamlit
 pandas
 numpy
 matplotlib
-openai
 scikit-learn
 cloudpickle
+gzip
