@@ -17,7 +17,7 @@ from openai import OpenAI
 # 1) DOWNLOAD MODEL FROM GOOGLE DRIVE IF NOT PRESENT
 # ============================================================
 
-MODEL_URL = "https://drive.google.com/uc?id=1s6nG5P0r9jDAFa0g8wFZfWIwuuvhdzjQ"
+MODEL_URL = "https://drive.google.com/uc?id=15nG5Po9RjDAFa0g8wfZFlWIwuuvhdzjQ"
 MODEL_PATH = "model.pkl"
 
 if not os.path.exists(MODEL_PATH):
