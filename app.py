@@ -26,7 +26,9 @@ if not os.path.exists(MODEL_PATH):
 @st.cache_resource
 def load_model():
     with open(MODEL_PATH, "rb") as f:
-        return cloudpickle.load(f)
+        import pickle
+        return pickle.load(f)
+
 
 model = load_model()
 
