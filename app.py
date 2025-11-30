@@ -1,6 +1,6 @@
 # ============================================================
-# Walmart Sales Prediction – FINAL Streamlit App
-# FIXED: Uses cloudpickle to load sklearn model
+# Walmart Sales Prediction – Streamlit App using model.pkl.gz
+# Loads compressed model directly from GitHub repo
 # ============================================================
 
 import streamlit as st
@@ -8,38 +8,25 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import base64
-import os
-import gdown
-import cloudpickle
+import pickle
+import gzip
 from openai import OpenAI
 
-# ============================================================
-# 1) DOWNLOAD MODEL FROM GOOGLE DRIVE IF NOT PRESENT
-# ============================================================
-
-MODEL_URL = "https://drive.google.com/uc?id=15nG5Po9RjDAFa0g8wfZFlWIwuuvhdzjQ"
-MODEL_PATH = "model.pkl"
-
-if not os.path.exists(MODEL_PATH):
-    st.info("📥 Downloading model from Google Drive...")
-    gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
-    st.success("Model downloaded successfully!")
-
+MODEL_PATH = "model.pkl.gz"   # compressed model file
 
 # ============================================================
-# 2) LOAD MODEL (USE CLOUDPICKLE — not pickle)
+# 1) LOAD GZIPPED MODEL
 # ============================================================
 
 @st.cache_resource
 def load_model():
-    with open(MODEL_PATH, "rb") as f:
-        return cloudpickle.load(f)   # 🔥 FIX HERE
+    with gzip.open(MODEL_PATH, "rb") as f:
+        return pickle.load(f)
 
 model = load_model()
 
-
 # ============================================================
-# 3) LOAD BACKGROUND + LOGO
+# 2) LOAD BACKGROUND + LOGO
 # ============================================================
 
 def get_base64(path):
@@ -52,16 +39,15 @@ def get_base64(path):
 bg64 = get_base64("background.jpg")
 logo64 = get_base64("logo.png")
 
-
 # ============================================================
-# 4) OPENAI CLIENT (Key stored in Streamlit Secrets)
+# 3) OPENAI CLIENT (key in Streamlit secrets)
 # ============================================================
 
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+client = OpenAI(api_key = st.secrets["OPENAI_API_KEY"])
 
 def ai_insight(title, explanation, values):
     prompt = f"""
-    Explain this result in simple business English.
+    Explain this chart in simple business English.
     Avoid ML terminology.
 
     Title: {title}
@@ -72,16 +58,15 @@ def ai_insight(title, explanation, values):
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
+            messages=[{"role":"user","content":prompt}],
             max_tokens=200
         )
         return response.choices[0].message.content.strip()
     except:
         return "(AI insight unavailable)"
 
-
 # ============================================================
-# 5) PAGE DESIGN
+# 4) PAGE STYLE
 # ============================================================
 
 if bg64:
@@ -112,17 +97,15 @@ if bg64:
     </style>
     """, unsafe_allow_html=True)
 
-
 # ============================================================
-# 6) HEADER
+# 5) HEADER
 # ============================================================
 
 st.markdown("<h1 style='text-align:center;color:#38BDF8;'>Walmart Weekly Sales Prediction</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;color:#7dd3fc;'>Dark Theme • Sky Blue Accents • AI Insights</p>", unsafe_allow_html=True)
 
-
 # ============================================================
-# 7) MAIN APPLICATION
+# 6) MAIN APP
 # ============================================================
 
 st.markdown('<div class="main-card">', unsafe_allow_html=True)
@@ -153,18 +136,16 @@ df = pd.DataFrame({
     "Week": [week]
 })
 
-
 # ============================================================
-# 8) PREDICTION
+# 7) PREDICTION
 # ============================================================
 
 if st.button("Predict Weekly Sales"):
     pred = float(model.predict(df)[0])
     st.markdown(f'<div class="pred-box"><b>${pred:,.2f}</b></div>', unsafe_allow_html=True)
 
-
 # ============================================================
-# 9) FEATURE IMPORTANCE (Manual Sensitivity)
+# 8) FEATURE IMPORTANCE
 # ============================================================
 
 st.subheader("📌 Feature Importance")
@@ -184,11 +165,10 @@ ax.barh(list(importance.keys()), list(importance.values()), color="#38BDF8")
 ax.invert_yaxis()
 st.pyplot(fig)
 
-st.write(ai_insight("Feature Importance", "Drivers of weekly sales", importance))
-
+st.write(ai_insight("Feature Importance", "Sales drivers", importance))
 
 # ============================================================
-# 10) 10-WEEK FORECAST
+# 9) 10-WEEK FORECAST
 # ============================================================
 
 st.subheader("📈 10-Week Forecast")
@@ -203,9 +183,10 @@ fig2, ax2 = plt.subplots()
 ax2.plot(future_weeks, preds, marker="o", color="#7dd3fc")
 st.pyplot(fig2)
 
-st.write(ai_insight("10-Week Forecast", "Predicted sales trend", {
-    "weeks": list(future_weeks),
-    "sales": list(preds)
-}))
+st.write(ai_insight(
+    "10-Week Forecast",
+    "Predicted sales trend",
+    {"weeks": list(future_weeks), "sales": list(preds)}
+))
 
 st.markdown("</div>", unsafe_allow_html=True)
